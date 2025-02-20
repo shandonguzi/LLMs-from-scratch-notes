@@ -2,7 +2,7 @@
 参考 [LLMs-from-scratch](https://github.com/rasbt/LLMs-from-scratch/)
 
 > [!TIP]
-> 整理教程代码并延伸 LLM 和 Pytorch 知识点, macOS 环境下运行（cude --> mps）
+> 整理教程代码并延伸 LLM 和 Pytorch 知识点，macOS 环境下运行（cude --> mps）
 
 | Chapter Title                                              | Main Code (for Quick Access)                                                                                                    | All Code + Supplementary      |
 |------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
