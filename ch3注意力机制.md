@@ -74,7 +74,7 @@ print(attn_scores_2)
 
 <img src="https://sebastianraschka.com/images/LLMs-from-scratch-images/ch03_compressed/08.webp" width="500px">
 
-**步骤 2：** 将未标准化的注意力得分 ("omegas", $\omega$) 标准化，使它们的总和为 1
+**步骤 2：** 将未标准化的注意力得分 ("omegas",  $\omega$) 标准化，使它们的总和为 1
 
 这是一个将未标准化的注意力得分标准化为总和为 1 的简单方法（一种惯例，对解释有用，对训练稳定性很重要）
 
@@ -180,11 +180,11 @@ tensor([[0.4421, 0.5931, 0.5790],
 
 ##### 3.4.1 一步步计算attention weights
 
-逐步实现自注意力机制，我们首先引入三个训练权重矩阵 $W_q$、$W_k$ 和 $W_v$，这三个矩阵用于通过矩阵乘法将嵌入的输入标记 $x^{(i)}$ 投影到query、key、value向量中：
+逐步实现自注意力机制，我们首先引入三个训练权重矩阵 $W_q$、$W_k$ 和 $W_v$，这三个矩阵用于通过矩阵乘法将嵌入的输入标记 $x^{(i)}$ 投影到$query、key、value$向量中：
 
-- query：$q^{(i)} = W_q \,x^{(i)}$
-- key：$k^{(i)} = W_k \,x^{(i)}$
-- value：$v^{(i)} = W_v \,x^{(i)}$
+- $query：q^{(i)} = W_q \,x^{(i)}$
+- $key：k^{(i)} = W_k \,x^{(i)}$
+- $value：v^{(i)} = W_v \,x^{(i)}$
 
 ```python
 # 以 query_2 为例
@@ -269,7 +269,7 @@ tensor([[0.2996, 0.8053],
 """
 ```
 
-我们可以使用 PyTorch 的 Linear 简化上述实现，如果我们禁用 `bias`，与`nn.Parameter(torch.rand(...))` 相比，使用 `nn.Linear` 的另一大优势是 `nn.Linear` 具有**更好的权重初始化方案（Xavier 或 Kaiming 初始化）**，从而可以实现更稳定的模型训练
+我们可以使用 PyTorch 的 $nn.Linear$ 简化上述实现，如果我们禁用 $bias$，与$nn.Parameter(torch.rand(...))$ 相比，使用 $nn.Linear$ 的另一大优势是 $nn.Linear$ 具有**更好的权重初始化方案（Xavier 或 Kaiming 初始化）**，从而可以实现更稳定的模型训练
 
 ```python
 import torch.nn as nn
@@ -412,9 +412,9 @@ tensor([[1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000],
 
 ##### 3.5.2 masking with dropout
 
-- `dropout` 可以减少过拟合，更常见的做法是在**计算 `attention_weights` 后接 `dropout`**，这可能导致一行之和不再为1
-- `dropout rate` 一般为 0.1 / 0.2
-- **计算后的其他值等比例放大 `1 / (1 - dropout_rate)`**
+- $dropout$ 可以减少过拟合，更常见的做法是在**计算 $attention\_weights$ 后接 $dropout$**，这可能导致一行之和不再为1
+- $dropout\ rate$ 一般为 0.1 / 0.2
+- **计算后的其他值等比例放大 $1 / (1 - dropout\_rate)$**
 
 ```python
 # dropout rate 以 0.5 为例
@@ -573,7 +573,7 @@ class MultiHeadAttention(nn.Module):
         queries = self.W_query(x)
         values = self.W_value(x)
 
-        # We implicitly split the matrix by adding a `num_heads` dimension
+        # We implicitly split the matrix by adding a $num_heads$ dimension
         # Unroll last dim: (b, num_tokens, d_out) -> (b, num_tokens, num_heads, head_dim)
         keys = keys.view(b, num_tokens, self.num_heads, self.head_dim) 
         values = values.view(b, num_tokens, self.num_heads, self.head_dim)
@@ -632,7 +632,7 @@ context_vecs.shape: torch.Size([2, 6, 2])
 ```
 
 ```python
-# nn.MultiheadAttention版本
+# nn.MultiheadAttention版本, 手动生成QKV(实际不需要)
 
 import torch
 import torch.nn as nn
@@ -645,6 +645,8 @@ class MultiHeadAttention(nn.Module):
         self.num_heads = num_heads
         self.mha = nn.MultiheadAttention(embed_dim=d_out, num_heads=num_heads, dropout=dropout)
 
+        # 方便演示所以设置, 实际nn.MultiheadAttention内部实现已经完成了对 query、key 和 value 的线性变换
+        # 因此，可以直接传入 x，而不需要自己预先生成这三个不同的变换中QKV均是x
         self.W_query = nn.Linear(d_in, d_out, bias=qkv_bias)
         self.W_key = nn.Linear(d_in, d_out, bias=qkv_bias)
         self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
@@ -683,7 +685,7 @@ class MultiHeadAttention(nn.Module):
 # Example usage
 torch.manual_seed(123)
 
-# Assuming `batch` is a tensor of shape (b, num_tokens, d_in)
+# Assuming $batch$ is a tensor of shape (b, num_tokens, d_in)
 batch_size, context_length, d_in = batch.shape
 d_out = 2
 
@@ -692,6 +694,61 @@ output = model(batch)
 print(output)
 print("output.shape:", output.shape)
 ```
+
+```python
+# nn.MultiheadAttention版本, x直接传入mha, 默认输入输出的dim一样, 所以没有用到d_in
+
+import torch
+import torch.nn as nn
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, d_in, d_out, context_length, dropout, num_heads, qkv_bias=False, need_weights=True):
+        super().__init__()
+
+        self.context_length = context_length
+        self.d_out = d_out
+        self.num_heads = num_heads
+        self.mha = nn.MultiheadAttention(embed_dim=d_out, num_heads=num_heads, 
+                                         dropout=dropout, batch_first=True)
+
+        self.need_weights = need_weights
+        self.out_proj = nn.Linear(d_out, d_out)
+        self.register_buffer(
+            "mask",
+            torch.triu(torch.ones(context_length, context_length), diagonal=1).bool()
+        )
+
+    def forward(self, x):
+        b, num_tokens, d_in = x.shape
+
+        if self.context_length >= num_tokens:
+            attn_mask = self.mask[:num_tokens, :num_tokens]
+        else:
+            attn_mask = self.mask[:self.context_length, :self.context_length]
+
+        # attn_mask broadcasting will handle batch_size dimension implicitly
+        attn_output, _ = self.mha(
+            x, x, x, attn_mask=attn_mask, need_weights=self.need_weights
+        )
+        
+        output = self.out_proj(attn_output)
+
+        return output
+
+# Example usage
+torch.manual_seed(123)
+
+# Assuming $batch$ is a tensor of shape (b, num_tokens, d_in)
+batch_size, context_length, d_in = batch.shape
+d_out = 3
+
+model = MultiHeadAttention(d_in, d_out, context_length, dropout=0.1, num_heads=3)
+output = model(batch)
+print(output)
+print("output.shape:", output.shape)
+```
+
+**`nn.MultiHeadAttention` 的三x版本比手撕 `MultiHeadAttention` 版本的参数量多 60w 左右，在 GPT-2标准版的实现中体现为最终多了 7million 个参数（12 * 60w）**
 
 <img src="https://sebastianraschka.com/images/LLMs-from-scratch-images/ch03_compressed/26.webp" width="500px">
 
@@ -805,7 +862,7 @@ print("mask.device:", ca_without_buffer.mask.device)
 # mask.device: mps:0
 ```
 
-**与常规张量相比，PyTorch 缓冲区的另一个优势是它们被包含在模型的 `state_dict` 中，且在修改 `mask` 后进行的模型保存与加载会保存修改后的结果**
+**与常规张量相比，PyTorch 缓冲区的另一个优势是它们被包含在模型的 $state\_dict$ 中，且在修改 $mask$ 后进行的模型保存与加载会保存修改后的结果**
 
 ```python
 ca_without_buffer.state_dict()
@@ -869,4 +926,3 @@ tensor([[0., 1., 1., 1., 1., 1.],
         [0., 0., 0., 0., 0., 0.]])
 """
 ```
-
